@@ -117,6 +117,9 @@ createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
 /// their producers.
 std::unique_ptr<Pass> createTopologicalSortPass();
 
+/// Creates a pass to lower operations generated from PyTorch lowering
+std::unique_ptr<Pass> createLowerTensorOps();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
