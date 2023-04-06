@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -245,7 +246,9 @@ static void populateTensorLoweringPatterns(RewritePatternSet &patterns,
                                            MLIRContext *context) {
 
   patterns.insert<FuncOpLowering, UnaryElementwiseOpLowering<math::SinOp>,
-                  BinaryElementwiseOpLowering<arith::AddFOp>, ToMemRefLowering,
+                  UnaryElementwiseOpLowering<math::CosOp>,
+                  BinaryElementwiseOpLowering<arith::AddFOp>, BinaryElementwiseOpLowering<arith::MulFOp>,
+                  ToMemRefLowering,
                   TensorStoreLowering>(context, converter);
 }
 
@@ -291,7 +294,7 @@ struct LowerTensorOps : public impl::LowerTensorOpsBase<LowerTensorOps> {
     target.addLegalDialect<memref::MemRefDialect>();
     target.addLegalDialect<AffineDialect>();
 
-    addDynamicallyLegalOp<math::SinOp, arith::AddFOp>(target);
+    addDynamicallyLegalOp<math::SinOp, math::CosOp, arith::AddFOp, arith::MulFOp>(target);
 
     target.addIllegalOp<bufferization::ToMemrefOp, memref::TensorStoreOp>();
 
