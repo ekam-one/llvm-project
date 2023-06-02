@@ -114,7 +114,8 @@ std::optional<spirv::StorageClass>
 spirv::mapMemorySpaceToOpenCLStorageClass(Attribute memorySpaceAttr) {
   // Handle null memory space attribute specially.
   if (!memorySpaceAttr)
-    return spirv::StorageClass::CrossWorkgroup;
+    // return spirv::StorageClass::CrossWorkgroup;
+    return spirv::StorageClass::Workgroup;
 
   // Unknown dialect custom attributes are not supported by default.
   // Downstream callers should plug in more specialized ones.

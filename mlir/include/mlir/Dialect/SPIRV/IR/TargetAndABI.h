@@ -111,6 +111,10 @@ StringRef getTargetEnvAttrName();
 /// and no extra extensions.
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
 
+/// Returns the default target environment: SPIR-V 1.0 with Shader capability
+/// and with SPV_KHR_storage_buffer_storage_class extension.
+TargetEnvAttr getSYCLDefaultTragetEnv(MLIRContext *context);
+
 /// Queries the target environment recursively from enclosing symbol table ops
 /// containing the given `op`.
 TargetEnvAttr lookupTargetEnv(Operation *op);

@@ -14,13 +14,19 @@
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 
 #include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
+#include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
+#include "mlir/Conversion/MathToSPIRV/MathToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include <cstdint>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTGPUTOSPIRV
@@ -56,12 +62,23 @@ void GPUToSPIRVPass::runOnOperation() {
 
   SmallVector<Operation *, 1> gpuModules;
   OpBuilder builder(context);
+
+  module.walk([&](gpu::GPUFuncOp funcOp) {
+    funcOp->setAttr(spirv::getEntryPointABIAttrName(),
+                    spirv::getEntryPointABIAttr(context, {64, 64, 64}));
+  });
+
   module.walk([&](gpu::GPUModuleOp moduleOp) {
     // Clone each GPU kernel module for conversion, given that the GPU
     // launch op still needs the original GPU kernel module.
     builder.setInsertionPoint(moduleOp.getOperation());
     gpuModules.push_back(builder.clone(*moduleOp.getOperation()));
   });
+
+  if (!gpuModules.empty()) {
+    auto targetEnvAttr = spirv::getSYCLDefaultTragetEnv(context);
+    module->setAttr(spirv::getTargetEnvAttrName(), targetEnvAttr);
+  }
 
   // Run conversion for each module independently as they can have different
   // TargetEnv attributes.
@@ -70,8 +87,12 @@ void GPUToSPIRVPass::runOnOperation() {
     if (mapMemorySpace) {
       std::unique_ptr<ConversionTarget> target =
           spirv::getMemorySpaceToStorageClassTarget(*context);
+
+      // spirv::MemorySpaceToStorageClassMap memorySpaceMap =
+      //     spirv::mapMemorySpaceToVulkanStorageClass;
+
       spirv::MemorySpaceToStorageClassMap memorySpaceMap =
-          spirv::mapMemorySpaceToVulkanStorageClass;
+          spirv::mapMemorySpaceToOpenCLStorageClass;
       spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
 
       RewritePatternSet patterns(context);
@@ -99,9 +120,45 @@ void GPUToSPIRVPass::runOnOperation() {
     mlir::arith::populateArithToSPIRVPatterns(typeConverter, patterns);
     populateMemRefToSPIRVPatterns(typeConverter, patterns);
     populateFuncToSPIRVPatterns(typeConverter, patterns);
+    cf::populateControlFlowToSPIRVPatterns(typeConverter, patterns);
+    populateMathToSPIRVPatterns(typeConverter, patterns);
 
     if (failed(applyFullConversion(gpuModule, *target, std::move(patterns))))
       return signalPassFailure();
+
+    // Set SPIRV Module requirements.
+    module.walk([&](spirv::ModuleOp spirvModule) {
+      if (!spirvModule->hasAttr(spirv::ModuleOp::getVCETripleAttrName())) {
+        auto triple = spirv::VerCapExtAttr::get(
+            spirv::Version::V_1_0,
+            {spirv::Capability::Kernel, spirv::Capability::Addresses,
+             spirv::Capability::Groups,
+             spirv::Capability::GroupNonUniformArithmetic,
+             spirv::Capability::GroupUniformArithmeticKHR},
+            {spirv::Extension::SPV_INTEL_memory_access_aliasing,
+             spirv::Extension::SPV_KHR_expect_assume,
+             spirv::Extension::SPV_KHR_no_integer_wrap_decoration},
+            context);
+        spirvModule.setVceTripleAttr(triple);
+
+        OpBuilder builder(context);
+        builder.setInsertionPointToEnd(spirvModule.front().getBlock());
+
+        spirv::FuncOp kernelFunc;
+        spirvModule.walk([&](spirv::FuncOp funcOp) {
+          if (funcOp.getSymName() == "kernel_kernel") {
+            kernelFunc = funcOp;
+          }
+        });
+
+        builder.create<spirv::EntryPointOp>(kernelFunc->getLoc(),
+                                            spirv::ExecutionModel::Kernel,
+                                            kernelFunc, ArrayRef<Attribute>());
+        builder.create<spirv::ExecutionModeOp>(
+            kernelFunc->getLoc(), kernelFunc,
+            spirv::ExecutionMode::ContractionOff, ArrayRef<int32_t>());
+      }
+    });
   }
 }
 

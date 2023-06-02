@@ -1,6 +1,7 @@
 add_mlir_conversion_library(MLIRSCFToGPU
   SCFToGPU.cpp
   SCFToGPUPass.cpp
+  SCFToGPUReductionPass.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/SCFToGPU

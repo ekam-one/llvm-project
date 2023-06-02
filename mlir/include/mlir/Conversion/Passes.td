@@ -845,6 +845,13 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
   let dependentDialects = ["affine::AffineDialect", "gpu::GPUDialect"];
 }
 
+def ConvertSCFToGpuReduction : Pass<"convert-scf-loops-to-gpu-reduce"> {
+  let summary = "Convert scf.loop to gpu.reduce";
+  let constructor = "mlir::createSCFLoopToGpuReductionPass()";
+  let dependentDialects = ["affine::AffineDialect", "gpu::GPUDialect", "scf::SCFDialect"];
+}
+
+
 //===----------------------------------------------------------------------===//
 // ShapeToStandard
 //===----------------------------------------------------------------------===//

@@ -17,4 +17,6 @@ add_mlir_conversion_library(MLIRGPUToSPIRV
   MLIRSPIRVConversion
   MLIRSupport
   MLIRTransforms
+  MLIRControlFlowToSPIRV
+  MLIRMathToSPIRV
   )

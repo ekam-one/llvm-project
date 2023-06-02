@@ -330,4 +330,24 @@ def TopologicalSort : Pass<"topological-sort"> {
   let constructor = "mlir::createTopologicalSortPass()";
 }
 
+def LowerTensorOps : Pass<"lower-tensor-ops"> {
+  let summary = "Lower tensor operations to memref dialect";
+  let description = [{
+    Lower tensor operations to affine dielact
+
+    This pass is required for lowering operations generated from FxGraph
+  }];
+
+  let constructor = "mlir::createLowerTensorOps()";
+}
+
+def SimplifyLinalgCopy : Pass<"simplify-linalg-copy"> {
+  let summary = "Simplifies linalg copy operations";
+  let description = [{
+    This pass is required for MHLO to SPIRV lowering.
+  }];
+
+  let constructor = "mlir::createSimplifyLinalgCopyPass()";
+}
+
 #endif // MLIR_TRANSFORMS_PASSES

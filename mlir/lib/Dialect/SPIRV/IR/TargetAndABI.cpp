@@ -181,6 +181,22 @@ spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
       spirv::DeviceType::Unknown, spirv::TargetEnvAttr::kUnknownDeviceID);
 }
 
+spirv::TargetEnvAttr spirv::getSYCLDefaultTragetEnv(MLIRContext *context) {
+  auto triple = spirv::VerCapExtAttr::get(
+      spirv::Version::V_1_0,
+      {spirv::Capability::Kernel, spirv::Capability::Addresses,
+       spirv::Capability::Groups, spirv::Capability::GroupNonUniformArithmetic,
+       spirv::Capability::GroupUniformArithmeticKHR},
+      {Extension::SPV_INTEL_memory_access_aliasing,
+       Extension::SPV_KHR_expect_assume,
+       Extension::SPV_KHR_no_integer_wrap_decoration},
+      context);
+  return spirv::TargetEnvAttr::get(
+      triple, spirv::getDefaultResourceLimits(context),
+      spirv::ClientAPI::Unknown, spirv::Vendor::Unknown,
+      spirv::DeviceType::Unknown, spirv::TargetEnvAttr::kUnknownDeviceID);
+}
+
 spirv::TargetEnvAttr spirv::lookupTargetEnv(Operation *op) {
   while (op) {
     op = SymbolTable::getNearestSymbolTable(op);

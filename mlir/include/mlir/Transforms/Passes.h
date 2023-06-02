@@ -19,6 +19,7 @@
 #include "mlir/Transforms/ViewOpGraph.h"
 #include "llvm/Support/Debug.h"
 #include <limits>
+#include <memory>
 
 namespace mlir {
 
@@ -121,6 +122,12 @@ createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
 /// topologically such that, as much as possible, users of values appear after
 /// their producers.
 std::unique_ptr<Pass> createTopologicalSortPass();
+
+/// Creates a pass to lower operations generated from PyTorch lowering
+std::unique_ptr<Pass> createLowerTensorOps();
+
+/// Creates a pass to simplify linalg copy operations.
+std::unique_ptr<Pass> createSimplifyLinalgCopyPass();
 
 //===----------------------------------------------------------------------===//
 // Registration
